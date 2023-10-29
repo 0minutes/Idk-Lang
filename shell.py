@@ -1,14 +1,14 @@
-import lexer
+from source.lexer import Lexer
 
 def main():
 	while (1):
-		user = input('>>> ')
-		if user == 'exit':
+		shell = input('>>> ')
+		if shell == 'exit':
 			exit(0)
 
-		tokens = lexer.Lexer(user).tokenize()
+		tokens = Lexer(source=shell)
 
-		for token in tokens:
+		for token in tokens.tokenize():
 			print(token)
 
 if __name__ == '__main__':
