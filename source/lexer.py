@@ -3,16 +3,20 @@ from source.Error import *
 class TokenType:
 	Int = 'Integer'
 	Float = 'Float'
-
 	String = 'String'
-	Identifier = 'Identifier'
-	Equal = 'Equal'
+ 
 	Open_Paren = 'Open_Paren'
 	Close_Paren = 'Close_Paren'
 
-	Operation = 'Operation'
+	Equal = 'Equal'
+	Plus = 'Plus'
+	Minus = 'Minus'
+	Multiply = 'Multiply'
+	Divide = 'Divide'
+ 
 	Logical_Expr = 'Logical_Expr'
 
+	Identifier = 'Identifier'
 	Let = 'let'
 	Const = 'const'
 
@@ -47,6 +51,17 @@ class Lexer:
 			'let' : TokenType.Let,
 			'const' : TokenType.Const,
 		}
+		
+		self.SPECIAL_CHAR: dict[str : TokenType] = {
+			')' : TokenType.Open_Paren,
+   			'(' : TokenType.Close_Paren,
+			'=' : TokenType.Equal,
+   
+			'+' : TokenType.Plus,
+			'-' : TokenType.Minus,
+			'*' : TokenType.Multiply,
+			'/' : TokenType.Divide,
+		}
 
 	@staticmethod
 	def isalpha(string: str) -> bool:
@@ -71,24 +86,8 @@ class Lexer:
 			current_line = "".join(src)
    
 			while (len(src) > 0):
-				if (src[0] == '('):
-					column += 1
-					location = (self.source_file, line, column)
-     
-					self.tokens.append(Token(src.pop(0), TokenType.Open_Paren).Make())
-
-				elif (src[0] == ')'):
-					column += 1
-					self.tokens.append(Token(src.pop(0), TokenType.Close_Paren).Make())
-
-				elif (src[0] == '='):
-					column += 1
-					location = (self.source_file, line, column)
-					self.tokens.append(Token(src.pop(0), TokenType.Equal).Make())
-
-				elif (src[0] in ('+', '-', '*', '/')): 
-					column += 1
-					self.tokens.append(Token(src.pop(0), TokenType.Operation).Make()) 
+				if (src[0] in self.SPECIAL_CHAR):
+					self.tokens.append(Token(src[0], self.SPECIAL_CHAR[src.pop(0)]).Make())
 
 				else:
 
@@ -97,7 +96,8 @@ class Lexer:
 						is_Float = False
 
 						while(len(src) > 0 and (src[0].isdigit() or src[0] == '.')):
-
+							if (self.isalpha(src[0])): break
+							if (src[0] in self.SPECIAL_CHAR): break
 							if (src[0] == ' '): break
 
 							if (src[0] == '.' and is_Float):
@@ -111,8 +111,9 @@ class Lexer:
 
 							column += 1
 							location = (self.source_file, line, column)
+       
 						if src:
-							if src[0] != ' ':
+							if self.isalpha(src[0]):
 								location = (self.source_file, line, column)
 								return self.UnknownValError.ThrowError(f'Unknown value `{src[0]}` at `{current_line}`', location)
 						
