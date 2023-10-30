@@ -8,8 +8,7 @@ def main():
 
 		tokens = Lexer(source=shell)
 
-		for token in tokens.tokenize():
-			print(token)
+		print(tokens.tokenize())
 
 if __name__ == '__main__':
 	main()

@@ -1,4 +1,5 @@
 from source.Error import *
+from sys import argv
 
 class TokenType:
 	Int = 'Integer'
@@ -20,6 +21,8 @@ class TokenType:
 	Let = 'let'
 	Const = 'const'
 
+	Error = 'Error'
+
 class Token:
 	def __init__(self, Value: str, Type: TokenType) -> None:
 		self.Value = Value
@@ -29,7 +32,7 @@ class Token:
 		return {self.Type : self.Value}
 
 class Lexer:
-	def __init__(self, source = "",source_file: str = None) -> None:
+	def __init__(self, source = "", source_file: str = None) -> None:
 
 		if source_file is not None:
 			with open(source_file, 'r') as f:
@@ -38,7 +41,7 @@ class Lexer:
 		else:
 			self.source: str = source
 			self.source_file: str = 'shell'
-   
+
 		self.tokens: list[Token] = []
 
 		self.UnknownError = Error('Unexpected Error')
@@ -83,11 +86,13 @@ class Lexer:
       
 			src: list[chr] = list(self.lines.pop(0))
 			line += 1
+			column = 1
 			current_line = "".join(src)
    
 			while (len(src) > 0):
 				if (src[0] in self.SPECIAL_CHAR):
 					self.tokens.append(Token(src[0], self.SPECIAL_CHAR[src.pop(0)]).Make())
+					column += 1
 
 				else:
 
@@ -102,8 +107,8 @@ class Lexer:
 
 							if (src[0] == '.' and is_Float):
 								location = (self.source_file, line, column)
-								return self.UnknownValError.ThrowError(f'Unknown value `{src[0]}` at `{self.lines}`', location)
-
+								return self.UnknownValError.ThrowError(f'Unknown value `{src[0]}` at `{current_line}`', location)
+							
 							if (src[0] == '.'):
 								is_Float = True
 
@@ -116,7 +121,7 @@ class Lexer:
 							if self.isalpha(src[0]):
 								location = (self.source_file, line, column)
 								return self.UnknownValError.ThrowError(f'Unknown value `{src[0]}` at `{current_line}`', location)
-						
+
 						if (is_Float):
 							self.tokens.append(Token(num, TokenType.Float).Make())
 						
@@ -125,7 +130,7 @@ class Lexer:
 
 						else:
 							location = (self.source_file, line, column)
-							return self.UnknownError.ThrowError('A bug during the lexing of the integers/floats', location)
+							return self.UnknownValError.ThrowError(f'A bug during the lexing of floats/ints', location)
 
 					elif (src[0] == '"'):
 						string = ''
@@ -150,7 +155,7 @@ class Lexer:
 							location = (self.source_file, line, column)
 						if ((len(string) >= 2 and string[-1] != '"') or len(string) == 1):
 							location = (self.source_file, line, column)
-							return self.StringError.ThrowError(f"Un-Closed String at `{current_line}`", location)
+							return self.StringError.ThrowError(f'Unclosed String at {string}', location)
 
 						self.tokens.append(Token(xstring, TokenType.String).Make())
 
@@ -164,11 +169,12 @@ class Lexer:
 						if src:
 							if src[0] == '"':
 								location = (self.source_file, line, column)
-								return self.StringError.ThrowError(f'Un-Opened String `{ident}` at `{current_line}`', location)
+								return self.StringError.ThrowError(f'Un-Opened string `{ident}` at `{current_line}`', location)
 
 							if src[0] != ' ':
 								location = (self.source_file, line, column)
-								return self.UnknownValError.ThrowError(f'Unknown value `{src[0]}` at `{current_line}`', location)
+
+								return self.UnknownValError.ThrowError(f'Unknown value `{src[0]}` at `{current_line}`', location)		
 
 						if (ident not in self.KEYWORDS):
 							self.tokens.append(Token(ident, TokenType.Identifier).Make())
@@ -184,10 +190,47 @@ class Lexer:
 					else:
 						location = (self.source_file, line, column)
 						return self.UnknownValError.ThrowError(f'Unknown value `{src[0]}` at `{current_line}`', location)
-					
-   
+							
 		return self.tokens
  
+def argv_show_help(filename) -> None:
+	print(f'''
+python[{filename} [file] [args...]]	
+
+[-h] / [--help]       - []    Shows help and exits
+[-I] / [--input-file] - [/./.] Add the input file location to be lexed
+	''')
+
 if __name__ == '__main__':
-    for token in Lexer(source_file='source/source.txt').tokenize():
-        print(token)
+	filename, *argv = argv
+	file = None
+
+	argv_option = ['--help', '-h', '--input-file', '-i']
+
+	while (len(argv) > 0):
+		if (file is None):
+			file = argv.pop(0)
+
+		elif argv[0][0] == '-':
+			if (argv[0] in argv_option):
+				if (argv[0] == '--help' or argv[0] == '-h'):
+					argv_show_help(filename)
+					exit(0)
+
+				elif ('--input-file' == argv[0] or '-i' == argv[0]):
+					if (len(argv) <= 1):
+						print(f'[ERROR] Not enought arguments at {argv[0]}')
+						exit(1)
+
+					elif (file is not None):
+						print(f'[INFO] File aready provided: {file}')
+						argv.pop(0)
+						argv.pop(0)
+					else:
+						argv.pop(0)
+						file = argv.pop(0)
+				else:
+					print(f'Unknown arg [{argv[0]}]')
+					exit(1)
+
+		print(Lexer(source_file=file).tokenize())
